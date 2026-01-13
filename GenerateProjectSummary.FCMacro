@@ -1,0 +1,374 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+GenerateProjectSummary.FCMacro
+
+This FreeCAD macro generates a comprehensive text summary of the active project
+that is optimized for AI analysis. The summary includes project structure,
+object hierarchy, properties, constraints, and relationships.
+
+This allows AI assistants to understand the project and provide:
+- Corrections for design issues
+- Improvements and optimizations
+- Suggestions for better modeling approaches
+
+Usage:
+1. Open a FreeCAD document
+2. Run this macro from Macro > Macros > Execute
+3. Select a save location for the generated .txt file
+
+Author: Generated with GitHub Copilot
+License: GPL-3.0
+"""
+
+import FreeCAD as App
+import FreeCADGui as Gui
+from PySide import QtGui
+import os
+import datetime
+
+
+def get_object_properties(obj):
+    """
+    Extract comprehensive properties from a FreeCAD object.
+    
+    Args:
+        obj: FreeCAD document object
+        
+    Returns:
+        Dictionary of property information
+    """
+    properties = {
+        'Name': obj.Name,
+        'Label': obj.Label,
+        'TypeId': obj.TypeId,
+        'Properties': {}
+    }
+    
+    # Get all properties
+    for prop_name in obj.PropertiesList:
+        try:
+            prop_value = getattr(obj, prop_name)
+            prop_type = obj.getTypeIdOfProperty(prop_name)
+            
+            # Format the value based on type
+            if prop_name == 'Shape' and hasattr(prop_value, 'Volume'):
+                properties['Properties'][prop_name] = {
+                    'Type': prop_type,
+                    'Volume': prop_value.Volume if hasattr(prop_value, 'Volume') else 'N/A',
+                    'Area': prop_value.Area if hasattr(prop_value, 'Area') else 'N/A',
+                    'BoundBox': str(prop_value.BoundBox) if hasattr(prop_value, 'BoundBox') else 'N/A'
+                }
+            elif isinstance(prop_value, (int, float, bool, str)):
+                properties['Properties'][prop_name] = {
+                    'Type': prop_type,
+                    'Value': prop_value
+                }
+            elif prop_name == 'Placement':
+                properties['Properties'][prop_name] = {
+                    'Type': prop_type,
+                    'Base': f"({prop_value.Base.x}, {prop_value.Base.y}, {prop_value.Base.z})",
+                    'Rotation': f"{prop_value.Rotation.Axis} @ {prop_value.Rotation.Angle}°"
+                }
+            else:
+                properties['Properties'][prop_name] = {
+                    'Type': prop_type,
+                    'Value': str(prop_value)[:100]  # Truncate long values
+                }
+        except Exception as e:
+            properties['Properties'][prop_name] = f"Error: {str(e)}"
+    
+    # Get relationships
+    if hasattr(obj, 'InList'):
+        properties['UsedBy'] = [o.Label for o in obj.InList]
+    if hasattr(obj, 'OutList'):
+        properties['Uses'] = [o.Label for o in obj.OutList]
+    
+    return properties
+
+
+def get_sketch_info(sketch):
+    """
+    Extract detailed information from a Sketch object.
+    
+    Args:
+        sketch: Sketcher::SketchObject
+        
+    Returns:
+        Dictionary of sketch information
+    """
+    info = {
+        'GeometryCount': sketch.GeometryCount if hasattr(sketch, 'GeometryCount') else 0,
+        'ConstraintCount': sketch.ConstraintCount if hasattr(sketch, 'ConstraintCount') else 0,
+        'Geometries': [],
+        'Constraints': []
+    }
+    
+    # Get geometry information
+    if hasattr(sketch, 'Geometry'):
+        for i, geo in enumerate(sketch.Geometry):
+            geo_type = type(geo).__name__
+            info['Geometries'].append(f"{i}: {geo_type}")
+    
+    # Get constraint information
+    if hasattr(sketch, 'Constraints'):
+        for i, constraint in enumerate(sketch.Constraints):
+            constraint_type = constraint.Type if hasattr(constraint, 'Type') else 'Unknown'
+            info['Constraints'].append(f"{i}: {constraint_type}")
+    
+    return info
+
+
+def generate_project_summary():
+    """
+    Main function to generate a comprehensive AI-readable project summary.
+    """
+    doc = App.ActiveDocument
+    
+    if doc is None:
+        QtGui.QMessageBox.warning(
+            None,
+            "No Active Document",
+            "Please open a FreeCAD document before running this macro."
+        )
+        return
+    
+    # Ask user for save location
+    file_dialog = QtGui.QFileDialog()
+    file_path, _ = file_dialog.getSaveFileName(
+        None,
+        "Save Project Summary",
+        os.path.join(os.path.expanduser("~"), f"{doc.Name}_AI_summary.txt"),
+        "Text Files (*.txt)"
+    )
+    
+    if not file_path:
+        return  # User cancelled
+    
+    # Build the summary
+    summary = []
+    summary.append("=" * 80)
+    summary.append("FREECAD PROJECT SUMMARY FOR AI ANALYSIS")
+    summary.append("=" * 80)
+    summary.append("")
+    summary.append(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    summary.append(f"FreeCAD Version: {App.Version()}")
+    summary.append("")
+    
+    # Document information
+    summary.append("-" * 80)
+    summary.append("DOCUMENT INFORMATION")
+    summary.append("-" * 80)
+    summary.append(f"Name: {doc.Name}")
+    summary.append(f"Label: {doc.Label}")
+    summary.append(f"File Path: {doc.FileName if doc.FileName else 'Unsaved document'}")
+    summary.append(f"Object Count: {len(doc.Objects)}")
+    
+    if hasattr(doc, 'Comment') and doc.Comment:
+        summary.append(f"Comment: {doc.Comment}")
+    if hasattr(doc, 'Company') and doc.Company:
+        summary.append(f"Company: {doc.Company}")
+    if hasattr(doc, 'Author') and doc.Author:
+        summary.append(f"Author: {doc.Author}")
+    if hasattr(doc, 'CreatedBy') and doc.CreatedBy:
+        summary.append(f"Created By: {doc.CreatedBy}")
+    if hasattr(doc, 'CreationDate') and doc.CreationDate:
+        summary.append(f"Creation Date: {doc.CreationDate}")
+    if hasattr(doc, 'LastModifiedBy') and doc.LastModifiedBy:
+        summary.append(f"Last Modified By: {doc.LastModifiedBy}")
+    if hasattr(doc, 'LastModifiedDate') and doc.LastModifiedDate:
+        summary.append(f"Last Modified Date: {doc.LastModifiedDate}")
+    
+    summary.append("")
+    
+    # Object type statistics
+    summary.append("-" * 80)
+    summary.append("OBJECT TYPE STATISTICS")
+    summary.append("-" * 80)
+    type_counts = {}
+    for obj in doc.Objects:
+        type_id = obj.TypeId
+        type_counts[type_id] = type_counts.get(type_id, 0) + 1
+    
+    for type_id, count in sorted(type_counts.items()):
+        summary.append(f"  {type_id}: {count}")
+    summary.append("")
+    
+    # Project hierarchy
+    summary.append("-" * 80)
+    summary.append("PROJECT HIERARCHY")
+    summary.append("-" * 80)
+    summary.append("")
+    
+    def print_object_tree(obj, indent=0):
+        """Recursively print object hierarchy"""
+        lines = []
+        prefix = "  " * indent + "├─ "
+        lines.append(f"{prefix}{obj.Label} ({obj.TypeId})")
+        
+        # Print children if any
+        if hasattr(obj, 'Group') and obj.Group:
+            for child in obj.Group:
+                lines.extend(print_object_tree(child, indent + 1))
+        elif hasattr(obj, 'OutList') and obj.OutList:
+            # Only show direct children to avoid duplication
+            direct_children = [o for o in obj.OutList if obj in o.InList]
+            for child in direct_children[:3]:  # Limit to first 3
+                lines.extend(print_object_tree(child, indent + 1))
+            if len(direct_children) > 3:
+                lines.append("  " * (indent + 1) + "├─ ... and more")
+        
+        return lines
+    
+    # Find root objects (objects not used by any other object)
+    root_objects = [obj for obj in doc.Objects if not obj.InList]
+    for obj in root_objects:
+        summary.extend(print_object_tree(obj))
+    
+    summary.append("")
+    
+    # Detailed object information
+    summary.append("-" * 80)
+    summary.append("DETAILED OBJECT INFORMATION")
+    summary.append("-" * 80)
+    summary.append("")
+    
+    for i, obj in enumerate(doc.Objects, 1):
+        summary.append(f"\n{'*' * 40}")
+        summary.append(f"OBJECT {i}/{len(doc.Objects)}: {obj.Label}")
+        summary.append(f"{'*' * 40}")
+        summary.append(f"Internal Name: {obj.Name}")
+        summary.append(f"Type: {obj.TypeId}")
+        summary.append(f"Visible: {obj.ViewObject.Visibility if hasattr(obj, 'ViewObject') and obj.ViewObject else 'N/A'}")
+        summary.append("")
+        
+        # Special handling for sketches
+        if obj.TypeId == "Sketcher::SketchObject":
+            sketch_info = get_sketch_info(obj)
+            summary.append("Sketch Details:")
+            summary.append(f"  Geometry Count: {sketch_info['GeometryCount']}")
+            summary.append(f"  Constraint Count: {sketch_info['ConstraintCount']}")
+            if sketch_info['Geometries']:
+                summary.append("  Geometries:")
+                for geo in sketch_info['Geometries'][:10]:  # Limit output
+                    summary.append(f"    {geo}")
+                if len(sketch_info['Geometries']) > 10:
+                    summary.append(f"    ... and {len(sketch_info['Geometries']) - 10} more")
+            if sketch_info['Constraints']:
+                summary.append("  Constraints:")
+                for con in sketch_info['Constraints'][:10]:  # Limit output
+                    summary.append(f"    {con}")
+                if len(sketch_info['Constraints']) > 10:
+                    summary.append(f"    ... and {len(sketch_info['Constraints']) - 10} more")
+            summary.append("")
+        
+        # Key properties
+        summary.append("Key Properties:")
+        props = get_object_properties(obj)
+        for prop_name, prop_info in props['Properties'].items():
+            if prop_name in ['Label', 'Label2', 'ExpressionEngine']:
+                continue  # Skip redundant properties
+            
+            if isinstance(prop_info, dict):
+                if 'Value' in prop_info:
+                    summary.append(f"  {prop_name}: {prop_info['Value']}")
+                elif 'Volume' in prop_info:
+                    summary.append(f"  {prop_name}:")
+                    summary.append(f"    Volume: {prop_info['Volume']}")
+                    summary.append(f"    Area: {prop_info['Area']}")
+                else:
+                    summary.append(f"  {prop_name}: {prop_info}")
+            else:
+                summary.append(f"  {prop_name}: {prop_info}")
+        
+        # Relationships
+        if 'UsedBy' in props and props['UsedBy']:
+            summary.append(f"\nUsed by: {', '.join(props['UsedBy'])}")
+        if 'Uses' in props and props['Uses']:
+            summary.append(f"Uses: {', '.join(props['Uses'])}")
+        
+        summary.append("")
+    
+    # Analysis suggestions section
+    summary.append("\n" + "=" * 80)
+    summary.append("AI ANALYSIS GUIDELINES")
+    summary.append("=" * 80)
+    summary.append("")
+    summary.append("When analyzing this project, please consider:")
+    summary.append("")
+    summary.append("1. DESIGN CONSISTENCY:")
+    summary.append("   - Are naming conventions consistent?")
+    summary.append("   - Is the object hierarchy logical?")
+    summary.append("   - Are there duplicate or redundant objects?")
+    summary.append("")
+    summary.append("2. MODELING BEST PRACTICES:")
+    summary.append("   - Are sketches fully constrained?")
+    summary.append("   - Is the parametric design approach optimal?")
+    summary.append("   - Could any features be simplified?")
+    summary.append("")
+    summary.append("3. PERFORMANCE:")
+    summary.append("   - Are there overly complex geometries?")
+    summary.append("   - Could any operations be combined?")
+    summary.append("   - Are there unused objects that could be removed?")
+    summary.append("")
+    summary.append("4. MAINTAINABILITY:")
+    summary.append("   - Is the model easy to modify?")
+    summary.append("   - Are relationships between objects clear?")
+    summary.append("   - Would documentation help?")
+    summary.append("")
+    summary.append("5. POTENTIAL ISSUES:")
+    summary.append("   - Are there any broken references?")
+    summary.append("   - Are constraints conflicting?")
+    summary.append("   - Are there topology naming issues?")
+    summary.append("")
+    summary.append("Please provide specific, actionable suggestions for improvements.")
+    summary.append("")
+    summary.append("=" * 80)
+    summary.append("END OF SUMMARY")
+    summary.append("=" * 80)
+    
+    # Write to file
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write("\n".join(summary))
+        
+        # Calculate file size
+        file_size = os.path.getsize(file_path)
+        file_size_kb = file_size / 1024
+        
+        QtGui.QMessageBox.information(
+            None,
+            "Summary Generated",
+            f"Project summary generated successfully!\n\n"
+            f"File: {file_path}\n"
+            f"Size: {file_size_kb:.2f} KB\n"
+            f"Objects analyzed: {len(doc.Objects)}\n\n"
+            f"You can now share this file with AI assistants for analysis."
+        )
+        
+        # Ask if user wants to open the file
+        reply = QtGui.QMessageBox.question(
+            None,
+            "Open File",
+            "Do you want to open the generated summary file?",
+            QtGui.QMessageBox.Yes | QtGui.QMessageBox.No
+        )
+        
+        if reply == QtGui.QMessageBox.Yes:
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            elif os.name == 'posix':  # Linux/Mac
+                import subprocess
+                subprocess.call(['xdg-open', file_path])
+                
+    except Exception as e:
+        QtGui.QMessageBox.critical(
+            None,
+            "Error",
+            f"Failed to generate summary:\n{str(e)}"
+        )
+
+
+# Run the summary generation
+if __name__ == "__main__":
+    generate_project_summary()
