@@ -1,0 +1,98 @@
+import FreeCAD as App
+import os
+import sys
+
+def inspect_object(obj, f, indent=0):
+    indent_str = "  " * indent
+    f.write(f"{indent_str}[{obj.Name}] Label: '{obj.Label}'\n")
+    f.write(f"{indent_str}  Type: {obj.TypeId}\n")
+    
+    # 1. PLACEMENT
+    if hasattr(obj, "Placement"):
+        p = obj.Placement.Base
+        r = obj.Placement.Rotation
+        axis = r.Axis
+        angle = r.Angle * 180.0 / 3.14159
+        f.write(f"{indent_str}  Pos: X={p.x:.2f}, Y={p.y:.2f}, Z={p.z:.2f}\n")
+        f.write(f"{indent_str}  Rot: Axis({axis.x:.2f},{axis.y:.2f},{axis.z:.2f}) Angle({angle:.2f})\n")
+    
+    # 2. VISUALS
+    if hasattr(obj, "ViewObject") and obj.ViewObject:
+        try:
+            vis = "SHOW" if obj.ViewObject.Visibility else "HIDE"
+            
+            color = "N/A"
+            if hasattr(obj.ViewObject, "ShapeColor"):
+                    c = obj.ViewObject.ShapeColor
+                    color = f"({c[0]:.2f}, {c[1]:.2f}, {c[2]:.2f})"
+            
+            trans = "N/A"
+            if hasattr(obj.ViewObject, "Transparency"):
+                trans = obj.ViewObject.Transparency
+            
+            f.write(f"{indent_str}  Visual: {vis} | Color: {color} | Transp: {trans}\n")
+        except Exception as e:
+            f.write(f"{indent_str}  Visual Info: Error retrieving ({str(e)})\n")
+
+    # 3. GEOMETRY (Bounding Box)
+    if hasattr(obj, "Shape"):
+        try:
+             # Try method first (TopoShape)
+            valid = False
+            if hasattr(obj.Shape, "isValid"):
+                if callable(obj.Shape.isValid):
+                    valid = obj.Shape.isValid()
+                else:
+                    valid = obj.Shape.isValid
+            
+            if valid:
+                bb = obj.Shape.BoundBox
+                f.write(f"{indent_str}  BBox: X[{bb.XMin:.1f}, {bb.XMax:.1f}] Y[{bb.YMin:.1f}, {bb.YMax:.1f}] Z[{bb.ZMin:.1f}, {bb.ZMax:.1f}]\n")
+            else:
+                f.write(f"{indent_str}  Shape: Invalid or empty.\n")
+        except Exception as e:
+             f.write(f"{indent_str}  Shape Info: Error ({str(e)})\n")
+
+    # 4. HIERARCHY (Recursion for Groups/Parts)
+    if hasattr(obj, "Group") and obj.Group:
+        f.write(f"{indent_str}  Children ({len(obj.Group)}):\n")
+        for child in obj.Group:
+            inspect_object(child, f, indent + 1)
+    
+    f.write(f"{indent_str}" + "-" * 30 + "\n")
+
+
+def run():
+    doc = App.ActiveDocument
+    if not doc:
+        App.Console.PrintError("Aucun document actif à inspecter.\n")
+        return
+
+    # Determine report path
+    if doc.FileName:
+        folder = os.path.dirname(doc.FileName)
+        filename = f"{os.path.splitext(os.path.basename(doc.FileName))[0]}_inspection.txt"
+        report_path = os.path.join(folder, filename)
+    else:
+        # Fallback to home if unsaved
+        folder = os.path.expanduser("~")
+        report_path = os.path.join(folder, f"{doc.Name}_inspection.txt")
+    
+    try:
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(f"=== INSPECTION REPORT FOR: {doc.Name} ===\n")
+            f.write(f"Path: {doc.FileName}\n")
+            f.write(f"Total Objects: {len(doc.Objects)}\n\n")
+
+            f.write("--- FLAT LIST OF OBJECTS ---\n")
+            for obj in doc.Objects:
+                inspect_object(obj, f)
+
+        App.Console.PrintMessage(f"Rapport d'inspection généré : {report_path}\n")
+        print(f"Rapport généré : {report_path}")
+        
+    except IOError as e:
+        App.Console.PrintError(f"Erreur d'écriture du rapport : {e}\n")
+
+if __name__ == "__main__":
+    run()
