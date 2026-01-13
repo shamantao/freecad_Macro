@@ -209,7 +209,7 @@ def export_project_to_python():
                 os.startfile(file_path)
             elif os.name == 'posix':  # Linux/Mac
                 import subprocess
-                subprocess.call(['xdg-open', file_path])
+                subprocess.run(['xdg-open', file_path])
                 
     except Exception as e:
         QtGui.QMessageBox.critical(

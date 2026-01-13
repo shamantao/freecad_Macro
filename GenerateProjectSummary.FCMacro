@@ -152,7 +152,7 @@ def generate_project_summary():
     summary.append("=" * 80)
     summary.append("")
     summary.append(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    summary.append(f"FreeCAD Version: {App.Version()}")
+    summary.append(f"FreeCAD Version: {'.'.join(App.Version())}")
     summary.append("")
     
     # Document information
@@ -359,7 +359,7 @@ def generate_project_summary():
                 os.startfile(file_path)
             elif os.name == 'posix':  # Linux/Mac
                 import subprocess
-                subprocess.call(['xdg-open', file_path])
+                subprocess.run(['xdg-open', file_path])
                 
     except Exception as e:
         QtGui.QMessageBox.critical(
