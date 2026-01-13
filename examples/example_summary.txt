@@ -1,0 +1,122 @@
+================================================================================
+FREECAD PROJECT SUMMARY FOR AI ANALYSIS
+================================================================================
+
+Generated: 2026-01-13 12:00:00
+FreeCAD Version: ['0', '21', '2']
+
+--------------------------------------------------------------------------------
+DOCUMENT INFORMATION
+--------------------------------------------------------------------------------
+Name: SimpleExample
+Label: SimpleExample
+File Path: /path/to/SimpleExample.FCStd
+Object Count: 3
+Comment: A simple example project with basic shapes
+Author: Example User
+Creation Date: 2026-01-12 10:30:00
+
+--------------------------------------------------------------------------------
+OBJECT TYPE STATISTICS
+--------------------------------------------------------------------------------
+  Part::Box: 1
+  Part::Cylinder: 1
+  Part::Sphere: 1
+
+--------------------------------------------------------------------------------
+PROJECT HIERARCHY
+--------------------------------------------------------------------------------
+
+├─ Box (Part::Box)
+├─ Cylinder (Part::Cylinder)
+├─ Sphere (Part::Sphere)
+
+--------------------------------------------------------------------------------
+DETAILED OBJECT INFORMATION
+--------------------------------------------------------------------------------
+
+
+****************************************
+OBJECT 1/3: Box
+****************************************
+Internal Name: Box
+Type: Part::Box
+Visible: True
+
+Key Properties:
+  Length: 10.0
+  Width: 10.0
+  Height: 10.0
+  Placement: Base: (0.0, 0.0, 0.0), Rotation: (0.0, 0.0, 1.0) @ 0.0°
+  Shape:
+    Volume: 1000.0
+    Area: 600.0
+
+
+****************************************
+OBJECT 2/3: Cylinder
+****************************************
+Internal Name: Cylinder
+Type: Part::Cylinder
+Visible: True
+
+Key Properties:
+  Radius: 5.0
+  Height: 20.0
+  Placement: Base: (20.0, 0.0, 0.0), Rotation: (0.0, 0.0, 1.0) @ 0.0°
+  Shape:
+    Volume: 1570.796
+    Area: 785.398
+
+
+****************************************
+OBJECT 3/3: Sphere
+****************************************
+Internal Name: Sphere
+Type: Part::Sphere
+Visible: True
+
+Key Properties:
+  Radius: 7.5
+  Placement: Base: (40.0, 0.0, 0.0), Rotation: (0.0, 0.0, 1.0) @ 0.0°
+  Shape:
+    Volume: 1767.146
+    Area: 706.858
+
+
+================================================================================
+AI ANALYSIS GUIDELINES
+================================================================================
+
+When analyzing this project, please consider:
+
+1. DESIGN CONSISTENCY:
+   - Are naming conventions consistent?
+   - Is the object hierarchy logical?
+   - Are there duplicate or redundant objects?
+
+2. MODELING BEST PRACTICES:
+   - Are sketches fully constrained?
+   - Is the parametric design approach optimal?
+   - Could any features be simplified?
+
+3. PERFORMANCE:
+   - Are there overly complex geometries?
+   - Could any operations be combined?
+   - Are there unused objects that could be removed?
+
+4. MAINTAINABILITY:
+   - Is the model easy to modify?
+   - Are relationships between objects clear?
+   - Would documentation help?
+
+5. POTENTIAL ISSUES:
+   - Are there any broken references?
+   - Are constraints conflicting?
+   - Are there topology naming issues?
+
+Please provide specific, actionable suggestions for improvements.
+
+================================================================================
+END OF SUMMARY
+================================================================================
